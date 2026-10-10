@@ -18,8 +18,10 @@
 #include "mcio.h"
 #include "ps1card.h"
 #include "svpng.h"
+#include "paean_sync.h"
 
 static char host_buf[256];
+extern save_list_t hdd_saves;
 
 static void _set_dest_path(char* path, int dest, const char* folder)
 {
@@ -716,7 +718,7 @@ static int webReqHandler(dWebRequest_t* req, dWebResponse_t* res, void* list)
 
 		fprintf(f, "<html><head><meta charset=\"UTF-8\"><style>h1, h2 { font-family: arial; } img { display: none; } table { border-collapse: collapse; margin: 25px 0; font-size: 0.9em; font-family: sans-serif; min-width: 400px; box-shadow: 0 0 20px rgba(0, 0, 0, 0.15); } table thead tr { background-color: #009879; color: #ffffff; text-align: left; } table th, td { padding: 12px 15px; } table tbody tr { border-bottom: 1px solid #dddddd; } table tbody tr:nth-of-type(even) { background-color: #f3f3f3; } table tbody tr:last-of-type { border-bottom: 2px solid #009879; }</style>");
 		fprintf(f, "<script language=\"javascript\">function show(sid,src){var im=document.getElementById('img'+sid);im.src=src;im.style.display='block';document.getElementById('btn'+sid).style.display='none';}</script>");
-		fprintf(f, "<title>Apollo Save Tool</title></head><body><h1>.:: Apollo Save Tool</h1><h2>Index of %s</h2><table><thead><tr><th>Name</th><th>Icon</th><th>Title ID</th><th>Folder</th><th>Location</th></tr></thead><tbody>", selected_entry->path);
+		fprintf(f, "<title>" PAEAN_NAME "</title></head><body><h1>.:: " PAEAN_NAME "</h1><h2>Index of %s</h2><table><thead><tr><th>Name</th><th>Icon</th><th>Title ID</th><th>Folder</th><th>Location</th></tr></thead><tbody>", selected_entry->path);
 
 		int i = 0;
 		for (node = list_head(list); (item = list_get(node)); node = list_next(node), i++)
@@ -1788,13 +1790,39 @@ static void toggleBrowserHistory(int usr)
 	}
 }
 
+/*
+ * After a sync changed saves on the HDD, make sure the HDD save list is
+ * rebuilt. If the command was started from inside that list we can't free it
+ * here, so flag the entry and let the menu reload it when the user leaves.
+ */
+static void refreshAfterSync(int changed)
+{
+	list_node_t *node;
+	save_entry_t *item;
+
+	if (!changed)
+		return;
+
+	for (node = list_head(hdd_saves.list); (item = list_get(node)); node = list_next(node))
+		if (item == selected_entry)
+		{
+			selected_entry->flags |= SAVE_FLAG_UPDATED;
+			return;
+		}
+
+	UnloadGameList(hdd_saves.list);
+	hdd_saves.list = NULL;
+}
+
 void execCodeCommand(code_entry_t* code, const char* codecmd)
 {
 	char *tmp = NULL;
 	char mount[ORBIS_SAVE_DATA_DIRNAME_DATA_MAXSIZE];
 
+	// sync commands mount the save themselves (and may delete/recreate it)
 	if (selected_entry->flags & (SAVE_FLAG_HDD|SAVE_FLAG_LOCKED) &&
-		codecmd[0] != CMD_DELETE_SAVE && codecmd[0] != CMD_COPY_PFS)
+		codecmd[0] != CMD_DELETE_SAVE && codecmd[0] != CMD_COPY_PFS &&
+		codecmd[0] != CMD_SYNC_LAN_SAVE && codecmd[0] != CMD_SYNC_CLOUD_SAVE)
 	{
 		if (!orbis_SaveMount(selected_entry, selected_entry->flags & (SAVE_FLAG_TROPHY|SAVE_FLAG_LOCKED), mount))
 		{
@@ -2035,6 +2063,36 @@ void execCodeCommand(code_entry_t* code, const char* codecmd)
 		case CMD_EXP_PS1_VM1:
 		case CMD_EXP_PS1_VMP:
 			export_ps1vmc(code->file, codecmd[1], codecmd[0] == CMD_EXP_PS1_VMP);
+			code->activated = 0;
+			break;
+
+		case CMD_SYNC_LAN_SERVER:
+			refreshAfterSync(lan_receive_mode());
+			code->activated = 0;
+			break;
+
+		case CMD_SYNC_LAN_ALL:
+			refreshAfterSync(lan_sync(NULL, NULL));
+			code->activated = 0;
+			break;
+
+		case CMD_SYNC_LAN_SAVE:
+			refreshAfterSync(lan_sync(selected_entry->title_id, selected_entry->dir_name));
+			code->activated = 0;
+			break;
+
+		case CMD_SYNC_CLOUD_ALL:
+			refreshAfterSync(cloud_sync(NULL, NULL));
+			code->activated = 0;
+			break;
+
+		case CMD_SYNC_CLOUD_SAVE:
+			refreshAfterSync(cloud_sync(selected_entry->title_id, selected_entry->dir_name));
+			code->activated = 0;
+			break;
+
+		case CMD_SYNC_GDRIVE_LINK:
+			gdrive_link_account();
 			code->activated = 0;
 			break;
 

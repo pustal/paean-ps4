@@ -51,7 +51,7 @@ void update_db_path(char *p);
 void update_vmc_path(char *p);
 
 app_config_t apollo_config = {
-    .app_name = "APOLLO",
+    .app_name = "PAEAN",
     .app_ver = {0},
     .save_db = ONLINE_URL,
     .ftp_url = "",
@@ -65,6 +65,9 @@ app_config_t apollo_config = {
     .user_id = 0,
     .psid = {0, 0},
     .account_id = 0,
+    .cloud_type = 0,
+    .sync_profile = "default",
+    .cloud_url = "",
 };
 
 int close_app = 0;
@@ -662,19 +665,19 @@ s32 main(s32 argc, const char* argv[])
 
 	if (apollo_config.dbglog)
 	{
-		dbglogger_init_mode(FILE_LOGGER, APOLLO_PATH "apollo.log", 0);
-		notify_popup(NOTIFICATION_ICON_DEFAULT, "%s\n%s", _("Debug Logging Enabled"), APOLLO_PATH "apollo.log");
+		dbglogger_init_mode(FILE_LOGGER, APOLLO_PATH "paean.log", 0);
+		notify_popup(NOTIFICATION_ICON_DEFAULT, "%s\n%s", _("Debug Logging Enabled"), APOLLO_PATH "paean.log");
 	}
 
 	// Unpack application data on first run
-	if (strncmp(apollo_config.app_ver, APOLLO_VERSION, sizeof(apollo_config.app_ver)) != 0)
+	if (strncmp(apollo_config.app_ver, PAEAN_VERSION, sizeof(apollo_config.app_ver)) != 0)
 	{
 		LOG("Unpacking application data...");
 //		clean_directory(APOLLO_DATA_PATH);
 		if (extract_zip(APOLLO_APP_PATH "misc/appdata.zip", APOLLO_DATA_PATH))
 			notify_popup(NOTIFICATION_ICON_DEFAULT, _("Successfully installed local application data"));
 
-		strncpy(apollo_config.app_ver, APOLLO_VERSION, sizeof(apollo_config.app_ver));
+		strncpy(apollo_config.app_ver, PAEAN_VERSION, sizeof(apollo_config.app_ver));
 		save_app_settings(&apollo_config);
 	}
 

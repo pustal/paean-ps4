@@ -2,21 +2,26 @@
 #include <dbglogger.h>
 #define LOG dbglogger_log
 
-#define APOLLO_PATH				"/data/apollo/"
-#define APOLLO_SANDBOX_PATH		"/data/apollo/mount/%s/"
+/*
+ * Paean keeps its working data in its own folder so it never clobbers the
+ * settings, cache or patch database of an Apollo install on the same console.
+ */
+#define PAEAN_TITLE_ID			"PAEN00001"
+#define APOLLO_PATH				"/data/paean/"
+#define APOLLO_SANDBOX_PATH		"/data/paean/mount/%s/"
 
 #ifdef APOLLO_ENABLE_LOGGING
-#define APOLLO_APP_PATH			"/data/apollo/debug/"
+#define APOLLO_APP_PATH			"/data/paean/debug/"
 #define APOLLO_SETTING_PATH		"/mnt/sandbox/LOAD00044_000%s/"
 #else
-#define APOLLO_APP_PATH			"/mnt/sandbox/APOL00004_000/app0/assets/"
-#define APOLLO_SETTING_PATH		"/mnt/sandbox/APOL00004_000%s/"
+#define APOLLO_APP_PATH			"/mnt/sandbox/" PAEAN_TITLE_ID "_000/app0/assets/"
+#define APOLLO_SETTING_PATH		"/mnt/sandbox/" PAEAN_TITLE_ID "_000%s/"
 #endif
 
 #define APOLLO_USER_PATH		APOLLO_PATH "%08x/"
 #define APOLLO_DATA_PATH		APOLLO_PATH "data/"
 #define APOLLO_LOCAL_CACHE		APOLLO_PATH "cache/"
-#define APOLLO_UPDATE_URL		"https://api.github.com/repos/bucanero/apollo-ps4/releases/latest"
+#define APOLLO_UPDATE_URL		"https://api.github.com/repos/pustal/paean-ps4/releases/latest"
 
 #define MAX_USB_DEVICES         8
 #define USB0_PATH               "/mnt/usb0/"
@@ -135,6 +140,14 @@ enum cmd_code_enum
     CMD_NET_WEBSERVER,
     CMD_BROWSER_HISTORY,
 
+// Paean save sync commands
+    CMD_SYNC_LAN_SERVER,
+    CMD_SYNC_LAN_ALL,
+    CMD_SYNC_LAN_SAVE,
+    CMD_SYNC_CLOUD_ALL,
+    CMD_SYNC_CLOUD_SAVE,
+    CMD_SYNC_GDRIVE_LINK,
+
 // SFO patches
     SFO_UNLOCK_COPY,
     SFO_CHANGE_ACCOUNT_ID,
@@ -175,6 +188,7 @@ enum save_type_enum
     FILE_TYPE_ZIP,
     FILE_TYPE_SQL,
     FILE_TYPE_NET,
+    FILE_TYPE_SYNC,
 
     // License Files
     FILE_TYPE_RIF,
@@ -285,6 +299,7 @@ int ReadVmc2Codes(save_entry_t * save);
 int http_init(void);
 void http_end(void);
 int http_download(const char* url, const char* filename, const char* local_dst, int show_progress);
+void http_setup_curl(void *curl);
 void ftp_init(void);
 void ftp_end(void);
 int ftp_download(const char* url, const char* filename, const char* local_dst, int show_progress);

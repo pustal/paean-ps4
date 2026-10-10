@@ -1,4 +1,6 @@
-#define APOLLO_VERSION          "2.3.2"     //Apollo PS4 version (about menu)
+#define PAEAN_VERSION           "1.0.0"     //Paean version (about menu, update check)
+#define PAEAN_NAME              "Paean"     //Application name shown to the user
+#define APOLLO_VERSION          "2.3.2"     //Apollo PS4 version Paean is based on
 #define APOLLO_PLATFORM         "PS4"       //Apollo platform
 
 #define MENU_TITLE_OFF          45          //Offset of menu title text from menu mini icon
@@ -42,6 +44,13 @@ typedef struct
     uint64_t account_id;
     char save_db[256];
     char ftp_url[512];
+    /* Paean save sync settings (see include/paean_sync.h) */
+    uint8_t cloud_type;             /* enum sync_cloud_type */
+    char sync_profile[32];          /* cloud folder shared by both consoles */
+    char cloud_url[512];            /* ftp(s):// or http(s):// WebDAV base URL */
+    char gdrive_client_id[128];     /* Google OAuth client id */
+    char gdrive_client_secret[64];  /* Google OAuth client secret */
+    char gdrive_token[512];         /* Google OAuth refresh token */
 } app_config_t;
 
 extern menu_option_t menu_options[];

@@ -17,6 +17,7 @@
 #include "mcio.h"
 #include "ps1card.h"
 #include "sd.h"
+#include "paean_sync.h"
 
 #define UTF8_CHAR_STAR		"\xE2\x98\x85"
 
@@ -392,6 +393,16 @@ static void _addBackupCommands(save_entry_t* item)
 		if (apollo_config.ftp_url[0])
 		{
 			cmd = _createCmdCode(PATCH_COMMAND, CHAR_ICON_NET " ", _("Upload save backup to FTP"), CMD_UPLOAD_SAVE);
+			list_append(item->codes, cmd);
+		}
+
+		// Paean: sync just this save with the other console / the cloud
+		cmd = _createCmdCode(PATCH_COMMAND, CHAR_ICON_NET " ", _("Sync save with LAN PS4"), CMD_SYNC_LAN_SAVE);
+		list_append(item->codes, cmd);
+
+		if (cloud_is_configured())
+		{
+			cmd = _createCmdCode(PATCH_COMMAND, CHAR_ICON_NET " ", _("Sync save with Cloud"), CMD_SYNC_CLOUD_SAVE);
 			list_append(item->codes, cmd);
 		}
 	}
@@ -1098,6 +1109,11 @@ list_t * ReadBackupList(const char* userPath)
 	item->type = FILE_TYPE_SQL;
 	list_append(list, item);
 
+	item = _createSaveEntry(0, CHAR_ICON_NET " ", _("Paean Save Sync (LAN / Cloud)"));
+	item->path = strdup(SYNC_PATH);
+	item->type = FILE_TYPE_SYNC;
+	list_append(list, item);
+
 	item = _createSaveEntry(0, CHAR_ICON_NET " ", _("Network Tools (Downloader, Web Server)"));
 	item->path = strdup("/data/");
 	item->type = FILE_TYPE_NET;
@@ -1147,6 +1163,18 @@ int ReadBackupCodes(save_entry_t * bup)
 		cmd = _createCmdCode(PATCH_COMMAND, CHAR_ICON_NET " ", _("Local Web Server (full system access)"), CMD_NET_WEBSERVER);
 		list_append(bup->codes, cmd);
 		cmd = _createCmdCode(PATCH_COMMAND, CHAR_ICON_NET " ", _("Toggle Web Browser history"), CMD_BROWSER_HISTORY);
+		list_append(bup->codes, cmd);
+		return list_count(bup->codes);
+
+	case FILE_TYPE_SYNC:
+		bup->codes = list_alloc();
+		cmd = _createCmdCode(PATCH_COMMAND, CHAR_ICON_NET " ", _("LAN: Wait for sync from another PS4 (receive mode)"), CMD_SYNC_LAN_SERVER);
+		list_append(bup->codes, cmd);
+		cmd = _createCmdCode(PATCH_COMMAND, CHAR_ICON_NET " ", _("LAN: Sync all saves with another PS4"), CMD_SYNC_LAN_ALL);
+		list_append(bup->codes, cmd);
+		cmd = _createCmdCode(PATCH_COMMAND, CHAR_ICON_NET " ", _("Cloud: Sync all saves"), CMD_SYNC_CLOUD_ALL);
+		list_append(bup->codes, cmd);
+		cmd = _createCmdCode(PATCH_COMMAND, CHAR_ICON_USER " ", _("Cloud: Link Google Drive account"), CMD_SYNC_GDRIVE_LINK);
 		list_append(bup->codes, cmd);
 		return list_count(bup->codes);
 
@@ -1745,6 +1773,19 @@ list_t * ReadUserList(const char* userPath)
 		list_append(item->codes, cmd);
 
 		cmd = _createCmdCode(PATCH_COMMAND, CHAR_ICON_NET " ", _("Upload all Saves to FTP"), CMD_UPLOAD_ALL_SAVES);
+		list_append(item->codes, cmd);
+	}
+
+	// Paean save sync
+	cmd = _createCmdCode(PATCH_COMMAND, CHAR_ICON_NET " ", _("Sync all Saves with LAN PS4"), CMD_SYNC_LAN_ALL);
+	list_append(item->codes, cmd);
+
+	cmd = _createCmdCode(PATCH_COMMAND, CHAR_ICON_NET " ", _("Wait for sync from LAN PS4 (receive mode)"), CMD_SYNC_LAN_SERVER);
+	list_append(item->codes, cmd);
+
+	if (cloud_is_configured())
+	{
+		cmd = _createCmdCode(PATCH_COMMAND, CHAR_ICON_NET " ", _("Sync all Saves with Cloud"), CMD_SYNC_CLOUD_ALL);
 		list_append(item->codes, cmd);
 	}
 

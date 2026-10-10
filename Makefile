@@ -1,8 +1,11 @@
 # Package metadata.
-TITLE       := Apollo Save Tool
-VERSION     := 02.32
-TITLE_ID    := APOL00004
-CONTENT_ID  := IV0000-APOL00004_00-APOLLO0000000PS4
+# Paean uses its own title/content ID so it installs side by side with
+# Apollo Save Tool instead of replacing it. Keep TITLE_ID in sync with
+# PAEAN_TITLE_ID in include/saves.h (the sandbox paths depend on it).
+TITLE       := Paean
+VERSION     := 01.00
+TITLE_ID    := PAEN00001
+CONTENT_ID  := IV0000-PAEN00001_00-PAEAN00000000PS4
 
 # Libraries linked into the ELF.
 LIBS        := -lc -lkernel -lc++ -lSceAudioOut -lSceUserService -lScePigletv2VSH -lSceSysmodule -lSceFreeType -lSQLite \

@@ -89,6 +89,15 @@ static void set_curl_opts(CURL* curl)
 	}
 }
 
+/*
+ * Apply Paean's common curl options (user agent, TLS, timeouts, console
+ * proxy settings) to a handle created elsewhere, e.g. by the sync modules.
+ */
+void http_setup_curl(void *curl)
+{
+	set_curl_opts((CURL*) curl);
+}
+
 static int _curl_download(CURL *curl, const char* url, const char* filename, const char* local_dst, int show_progress)
 {
 	char full_url[1024];

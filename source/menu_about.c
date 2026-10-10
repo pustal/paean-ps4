@@ -18,7 +18,8 @@ static char user_id_str[9] = "00000000";
 static char psid_str[] = "0000000000000000 0000000000000000";
 static char account_id_str[] = "0000000000000000";
 
-const char * menu_about_strings[] = { "Bucanero", "Developer",
+const char * menu_about_strings[] = { "Paean", "Save sync fork",
+									"Bucanero", "Apollo developer",
 									"", "",
 									"PS3", "credits",
 									"Berion", "GUI design",
@@ -139,7 +140,7 @@ void Draw_AboutMenu_Ani(void)
 		SDL_RenderClear(renderer);
 		DrawBackground2D(0xFFFFFFFF);
 
-		DrawHeader_Ani(cat_about_png_index, _("About"), "v" APOLLO_VERSION, APP_FONT_TITLE_COLOR, 0xffffffff, ani, 12);
+		DrawHeader_Ani(cat_about_png_index, _("About"), "v" PAEAN_VERSION, APP_FONT_TITLE_COLOR, 0xffffffff, ani, 12);
 
 		//------------- About Menu Contents
 
@@ -163,6 +164,6 @@ void Draw_AboutMenu(int ll)
 		return(_draw_LeonLuna());
 
 	_setIdValues();
-	DrawHeader(cat_about_png_index, 0, _("About"), "v" APOLLO_VERSION, APP_FONT_TITLE_COLOR | 0xFF, 0xffffffff, 0);
+	DrawHeader(cat_about_png_index, 0, _("About"), "v" PAEAN_VERSION, APP_FONT_TITLE_COLOR | 0xFF, 0xffffffff, 0);
 	_draw_AboutMenu(0xFF);
 }

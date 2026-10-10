@@ -1,14 +1,17 @@
-# Apollo Save Tool (PS4)
+# Paean (PS4)
 
-[![Downloads][img_downloads]][app_downloads] [![Release][img_latest]][app_latest] [![License][img_license]][app_license]
-[![Build app package](https://github.com/bucanero/apollo-ps4/actions/workflows/build.yml/badge.svg)](https://github.com/bucanero/apollo-ps4/actions/workflows/build.yml)
+[![Release][img_latest]][app_latest] [![License][img_license]][app_license]
+[![Build app package](https://github.com/pustal/paean-ps4/actions/workflows/build.yml/badge.svg)](https://github.com/pustal/paean-ps4/actions/workflows/build.yml)
 ![PS4](https://img.shields.io/badge/-PS4-003791?style=flat&logo=PlayStation)
-[![Twitter](https://img.shields.io/twitter/follow/dparrino?label=Follow)](https://twitter.com/dparrino)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/bucanero/apollo-ps4)
 
-**Apollo Save Tool** is an application to manage save-game files on the PlayStation 4.
+**Paean** is a fork of [Apollo Save Tool](https://github.com/bucanero/apollo-ps4) by [Bucanero](https://github.com/bucanero)
+that adds **save-game sync between PS4 consoles**: over the local network, or through an FTP server,
+a WebDAV share (NAS, Nextcloud, ...) or Google Drive. Everything else Apollo does is still here.
 
-This homebrew app allows you to download, unlock, patch, and resign save-game files directly on your PS4.
+Paean has its own title ID (`PAEN00001`) and data folder (`/data/paean/`), so it installs **side by side
+with Apollo** and never touches Apollo's settings or cache.
+
+> A paean is a song of praise to Apollo.
 
 ![image](./docs/screenshots/screenshot-main.jpg)
 
@@ -28,6 +31,64 @@ This homebrew app allows you to download, unlock, patch, and resign save-game fi
 </details>
 
 **Comments, ideas, suggestions?** You can [contact me](https://github.com/bucanero/) on [Twitter](https://twitter.com/dparrino) and on [my website](http://www.bucanero.com.ar/).
+
+# Save Sync (Paean)
+
+Sync the PS4 saves of the **user currently running Paean** with another console. The two consoles can use
+different users / account IDs: saves travel decrypted and are re-encrypted and re-signed for the receiving user.
+
+## LAN sync (PS4 to PS4)
+
+1. On console **B** open `User Tools > Paean Save Sync` and choose **LAN: Wait for sync from another PS4 (receive mode)**.
+   Leave the dialog open.
+2. On console **A** choose **LAN: Sync all saves with another PS4** (also in `HDD Saves > Bulk Save Management`),
+   or open a single save and choose **Sync save with LAN PS4**.
+3. Console A finds B automatically (UDP broadcast on port `47231`; transfers use TCP port `47232`).
+   If your router blocks broadcasts, Paean offers to type B's IP address instead.
+4. Paean shows what will be sent / received, then does it. Console A drives everything; B only has to stay in receive mode.
+
+The LAN protocol has no authentication: use it on your own home network only.
+
+## Cloud sync (FTP / WebDAV / Google Drive)
+
+Both consoles sync against a shared folder, so they don't need to be on at the same time.
+In **Settings**:
+
+* **Cloud Sync Service**: `FTP / WebDAV` or `Google Drive`.
+* **Set Cloud Sync URL**: e.g. `ftp://user:pass@192.168.1.10:21/ps4/` or `https://user:pass@nas.local/webdav/ps4/`.
+* **Set Sync Profile Name**: use the **same** name on both consoles (default `default`). Files go to
+  `<url>/paean/<profile>/` (or `My Drive/Paean/<profile>/` on Google Drive).
+
+Then use **Cloud: Sync all saves** (User Tools or Bulk Save Management) or **Sync save with Cloud** on a single save.
+
+### Google Drive setup
+
+Google requires every app to have its own OAuth client, so you create one (free) once:
+
+1. In the [Google Cloud console](https://console.cloud.google.com/) create a project, enable the **Google Drive API**,
+   and configure the OAuth consent screen (External, add your Google account as a test user).
+2. Create an **OAuth client ID** of type **TVs and Limited Input devices**.
+3. Put the credentials in `/data/paean/gdrive.txt` on **both** consoles (e.g. via FTP):
+   ```
+   client_id=1234567890-abc.apps.googleusercontent.com
+   client_secret=GOCSPX-xxxxxxxx
+   ```
+   (or type them in when Paean asks).
+4. In Settings choose **Link Google Drive Account**, open the URL shown on your phone, enter the code, then press OK.
+
+Paean only asks for the `drive.file` scope: it can only see the files it created itself.
+
+## How changes are detected
+
+* Each save's modification time comes from the console's save database. When Paean imports a save it keeps the
+  **sender's** modification time, so a synced save has the same time on both consoles.
+* Paean remembers, per console / cloud profile, the time of every save at the last sync
+  (`/data/paean/sync/state/`). If only one side changed since then, that side wins. If both changed
+  (or the save was never synced), the **newer** copy wins.
+* Deleted saves are not propagated: a save missing on one side is copied to it.
+* Before a local save is overwritten, its current contents are zipped to `/data/paean/sync/backup/`
+  (the last 3 copies per save are kept).
+* **Close the game before syncing its saves.**
 
 # Features
 
@@ -96,7 +157,7 @@ My GitHub projects are open to a [sponsor program](https://patreon.com/dparrino)
 
 # Setup instructions
 
-No special setup is needed. Just download the latest [`IV0000-APOL00004_00-APOLLO0000000PS4.pkg`](https://github.com/bucanero/apollo-ps4/releases/latest/download/IV0000-APOL00004_00-APOLLO0000000PS4.pkg) package and install it on your PlayStation 4.
+No special setup is needed. Just download the latest [`IV0000-PAEN00001_00-PAEAN00000000PS4.pkg`](https://github.com/pustal/paean-ps4/releases/latest/download/IV0000-PAEN00001_00-PAEAN00000000PS4.pkg) package and install it on your PlayStation 4. It can be installed alongside Apollo Save Tool.
 On first run, the application will detect and setup the required user settings.
 
 ## Data folders
@@ -210,12 +271,12 @@ You need to have installed:
 > [!TIP]
 > **Developers:** You can find detailed technical documentation about the project in [this Wiki page](https://deepwiki.com/bucanero/apollo-ps4/).
 
-Run `make` to create a release build. If you want to include the latest save patches in your `.pkg` file, run `make createzip`.
+Run `make` to create a release build. The Makefile does not track header dependencies, so run `make clean` after changing anything in `include/`. If you want to include the latest save patches in your `.pkg` file, run `make createzip`.
 
 You can also set the `PS3LOAD` environment variable to your PS4 IP address: `export PS3LOAD=tcp:x.x.x.x`.
 This will allow you to use a [ps3load client](https://github.com/bucanero/ps4load/tree/main/client) and send the `eboot.bin` directly to the [PS4Load listener](https://github.com/bucanero/ps4load).
 
-To enable debug logging, build Apollo Save Tool with `make DEBUGLOG=1`. The application will send debug messages to
+To enable debug logging, build Paean with `make DEBUGLOG=1`. The application will send debug messages to
 UDP multicast address `239.255.0.100:30000`. To receive them you can use [socat][] on your computer:
 
 ```sh
@@ -223,6 +284,8 @@ $ socat udp4-recv:30000,ip-add-membership=239.255.0.100:0.0.0.0 -
 ```
 
 # License
+
+Paean (PS4) - save sync additions by [pustal](https://github.com/pustal), based on:
 
 [Apollo Save Tool](https://github.com/bucanero/apollo-ps4/) (PS4) - Copyright (C) 2020-2026 [Damian Parrino](https://twitter.com/dparrino)
 
@@ -232,9 +295,9 @@ the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
 [socat]: http://www.dest-unreach.org/socat/
-[app_downloads]: https://github.com/bucanero/apollo-ps4/releases
-[app_latest]: https://github.com/bucanero/apollo-ps4/releases/latest
-[app_license]: https://github.com/bucanero/apollo-ps4/blob/master/LICENSE
+[app_downloads]: https://github.com/pustal/paean-ps4/releases
+[app_latest]: https://github.com/pustal/paean-ps4/releases/latest
+[app_license]: https://github.com/pustal/paean-ps4/blob/main/LICENSE
 [img_downloads]: https://img.shields.io/github/downloads/bucanero/apollo-ps4/total.svg?maxAge=3600
-[img_latest]: https://img.shields.io/github/release/bucanero/apollo-ps4.svg?maxAge=3600
-[img_license]: https://img.shields.io/github/license/bucanero/apollo-ps4.svg?maxAge=2592000
+[img_latest]: https://img.shields.io/github/release/pustal/paean-ps4.svg?maxAge=3600
+[img_license]: https://img.shields.io/github/license/pustal/paean-ps4.svg?maxAge=2592000

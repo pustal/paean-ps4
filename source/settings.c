@@ -12,12 +12,14 @@
 #include "menu.h"
 #include "saves.h"
 #include "common.h"
+#include "paean_sync.h"
 
 #define _i18n(str) (str)
 #define ORBIS_USER_SERVICE_USER_ID_INVALID	-1
 
 static const char * db_opt[] = {_i18n("Online DB"), _i18n("FTP Server"), NULL};
 static const char * sort_opt[] = {_i18n("Disabled"), _i18n("by Name"), _i18n("by Title ID"), _i18n("by Type"), NULL};
+static const char * cloud_opt[] = {_i18n("Disabled"), _i18n("FTP / WebDAV"), _i18n("Google Drive"), NULL};
 static const char * usb_src[] = {"USB 0", "USB 1", "USB 2", "USB 3", "USB 4", "USB 5", "USB 6", "USB 7", _i18n("Fake USB"), _i18n("Auto-detect"), NULL};
 
 static void usb_callback(int sel);
@@ -29,6 +31,10 @@ static void clearcache_callback(int sel);
 static void upd_appdata_callback(int sel);
 static void server_callback(int sel);
 static void ftp_url_callback(int sel);
+static void cloud_type_callback(int sel);
+static void cloud_url_callback(int sel);
+static void gdrive_link_callback(int sel);
+static void sync_profile_callback(int sel);
 
 menu_option_t menu_options[] = {
 	{ .name = _i18n("Background Music"), 
@@ -86,6 +92,31 @@ menu_option_t menu_options[] = {
 		.value = NULL,
 		.callback = db_url_callback 
 	},
+	{ .name = _i18n("Cloud Sync Service"),
+		.options = cloud_opt,
+		.type = APP_OPTION_LIST,
+		.spacer = 1,
+		.value = &apollo_config.cloud_type,
+		.callback = cloud_type_callback
+	},
+	{ .name = _i18n("Set Cloud Sync URL (FTP / WebDAV)"),
+		.options = NULL,
+		.type = APP_OPTION_CALL,
+		.value = NULL,
+		.callback = cloud_url_callback
+	},
+	{ .name = _i18n("Link Google Drive Account"),
+		.options = NULL,
+		.type = APP_OPTION_CALL,
+		.value = NULL,
+		.callback = gdrive_link_callback
+	},
+	{ .name = _i18n("Set Sync Profile Name"),
+		.options = NULL,
+		.type = APP_OPTION_CALL,
+		.value = NULL,
+		.callback = sync_profile_callback
+	},
 	{ .name = _i18n("Clear Local Cache"),
 		.options = NULL, 
 		.type = APP_OPTION_CALL,
@@ -129,6 +160,27 @@ static void server_callback(int sel)
 	clean_directory(APOLLO_LOCAL_CACHE, ".txt");
 }
 
+/* Paean cloud sync: pick the backend (the matching setup is done separately). */
+static void cloud_type_callback(int sel)
+{
+	apollo_config.cloud_type = sel;
+}
+
+static void cloud_url_callback(int sel)
+{
+	cloud_set_url();
+}
+
+static void gdrive_link_callback(int sel)
+{
+	gdrive_link_account();
+}
+
+static void sync_profile_callback(int sel)
+{
+	cloud_set_profile();
+}
+
 static void db_url_callback(int sel)
 {
 	if (!osk_dialog_get_text(_("Enter the Online Database URL"), apollo_config.save_db, sizeof(apollo_config.save_db)))
@@ -158,7 +210,7 @@ static void ftp_url_callback(int sel)
 	// test the connection
 	ftp_init();
 	init_loading_screen(_("Testing connection..."));
-	ret = ftp_download(apollo_config.ftp_url, "apollo.txt", APOLLO_LOCAL_CACHE "users.ftp", 0);
+	ret = ftp_download(apollo_config.ftp_url, "paean.txt", APOLLO_LOCAL_CACHE "users.ftp", 0);
 	data = ret ? readTextFile(APOLLO_LOCAL_CACHE "users.ftp") : strdup("");
 
 	snprintf(tmp, sizeof(tmp), "%016lX", apollo_config.account_id);
@@ -168,11 +220,11 @@ static void ftp_url_callback(int sel)
 		FILE* fp = fopen(APOLLO_LOCAL_CACHE "users.ftp", "w");
 		if (fp)
 		{
-			fprintf(fp, "; Apollo Save Tool (" APOLLO_PLATFORM ") v" APOLLO_VERSION "\r\n%s\r\n", tmp);
+			fprintf(fp, "; " PAEAN_NAME " (" APOLLO_PLATFORM ") v" PAEAN_VERSION "\r\n%s\r\n", tmp);
 			fclose(fp);
 		}
 
-		ret = ftp_upload(APOLLO_LOCAL_CACHE "users.ftp", apollo_config.ftp_url, "apollo.txt", 0);
+		ret = ftp_upload(APOLLO_LOCAL_CACHE "users.ftp", apollo_config.ftp_url, "paean.txt", 0);
 	}
 	free(data);
 	stop_loading_screen();
@@ -217,7 +269,7 @@ void update_callback(int sel)
     if (!apollo_config.update)
         return;
 
-	LOG("checking latest Apollo version at %s", APOLLO_UPDATE_URL);
+	LOG("checking latest " PAEAN_NAME " version at %s", APOLLO_UPDATE_URL);
 
 	if (!http_download(APOLLO_UPDATE_URL, NULL, APOLLO_LOCAL_CACHE "ver.check", 0))
 	{
@@ -231,7 +283,8 @@ void update_callback(int sel)
 
 	LOG("received %ld bytes", strlen(buffer));
 
-	static const char find[] = "\"name\":\"Apollo Save Tool v";
+	// GitHub releases must be named "Paean v<version>" for this check to work
+	static const char find[] = "\"name\":\"" PAEAN_NAME " v";
 	const char* start = strstr(buffer, find);
 	if (!start)
 	{
@@ -251,7 +304,7 @@ void update_callback(int sel)
 	*end = 0;
 	LOG("latest version is %s", start);
 
-	if (strcasecmp(APOLLO_VERSION, start) == 0)
+	if (strcasecmp(PAEAN_VERSION, start) == 0)
 	{
 		LOG("no need to update");
 		goto end_update;
@@ -274,7 +327,7 @@ void update_callback(int sel)
 
 	if (show_dialog(DIALOG_TYPE_YESNO, _("New version available! Download update?")))
 	{
-		char* pkg_path = (dir_exists("/data/pkg") == SUCCESS) ? "/data/pkg/apollo-ps4.pkg" : "/data/apollo-ps4.pkg";
+		char* pkg_path = (dir_exists("/data/pkg") == SUCCESS) ? "/data/pkg/paean-ps4.pkg" : "/data/paean-ps4.pkg";
 		if (http_download(start, NULL, pkg_path, 1))
 			show_message(_("Update downloaded to %s"), pkg_path);
 		else
@@ -297,8 +350,8 @@ static void log_callback(int sel)
 		return;
 	}
 
-	dbglogger_init_mode(FILE_LOGGER, APOLLO_PATH "apollo.log", 0);
-	show_message("%s\n\n%s", _("Debug Logging Enabled!"), APOLLO_PATH "apollo.log");
+	dbglogger_init_mode(FILE_LOGGER, APOLLO_PATH "paean.log", 0);
+	show_message("%s\n\n%s", _("Debug Logging Enabled!"), APOLLO_PATH "paean.log");
 }
 
 static int updateSaveParams(const char* mountPath, const char* title, const char* subtitle, const char* details, uint32_t userParam)
@@ -341,7 +394,7 @@ int save_app_settings(app_config_t* config)
 	mount.blocks = ORBIS_SAVE_DATA_BLOCKS_MIN2;
 	mount.mountMode = (ORBIS_SAVE_DATA_MOUNT_MODE_CREATE2 | ORBIS_SAVE_DATA_MOUNT_MODE_RDWR | ORBIS_SAVE_DATA_MOUNT_MODE_COPY_ICON);
 
-	LOG("Apollo Save Tool %s v%s - Patch Engine v%s", APOLLO_PLATFORM, APOLLO_VERSION, APOLLO_LIB_VERSION);
+	LOG(PAEAN_NAME " %s v%s (Apollo v%s) - Patch Engine v%s", APOLLO_PLATFORM, PAEAN_VERSION, APOLLO_VERSION, APOLLO_LIB_VERSION);
 	if (sceSaveDataMount2(&mount, &mountResult) < 0) {
 		LOG("sceSaveDataMount2 ERROR");
 		return 0;
@@ -351,7 +404,7 @@ int save_app_settings(app_config_t* config)
 	snprintf(filePath, sizeof(filePath), APOLLO_SETTING_PATH "settings.bin", mountResult.mountPathName);
 	write_buffer(filePath, (uint8_t*) config, sizeof(app_config_t));
 
-	updateSaveParams(mountResult.mountPathName, "Apollo Save Tool", _("User Settings"), "www.bucanero.com.ar", 0);
+	updateSaveParams(mountResult.mountPathName, PAEAN_NAME, _("User Settings"), "github.com/pustal/paean-ps4", 0);
 	if (sceSaveDataUmount((void*)&mountResult.mountPathName) < 0)
 	{
 		LOG("UMOUNT ERROR");

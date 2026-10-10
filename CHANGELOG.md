@@ -1,8 +1,24 @@
 # Changelog
 
-All notable changes to the `apollo-ps4` project will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+All notable changes to the `paean-ps4` project (and the `apollo-ps4` project it is forked from) will be documented in this file. This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]()
+
+## Paean v1.0.0 (based on Apollo v2.3.2)
+
+### Added
+
+* LAN save sync between two PS4s running Paean (automatic discovery, receive mode, single save or all saves)
+* Cloud save sync through FTP/FTPS, WebDAV (http/https) or Google Drive (OAuth device flow)
+* Sync profiles, so consoles with different users / account IDs can share saves
+* Per-endpoint sync state with "newer wins" conflict handling
+* Automatic backup (last 3 copies) of any local save before a sync overwrites it
+
+### Changed
+
+* Renamed to Paean, with its own title ID `PAEN00001` / content ID so it installs alongside Apollo
+* Working data moved to `/data/paean/`; debug log is now `/data/paean/paean.log`
+* Update check points to the `pustal/paean-ps4` releases
 
 ---
 
